@@ -34,6 +34,12 @@
       const users = await res.json();
       const body = document.getElementById("usersBody");
       body.innerHTML = users.map(u => `
+        <tr>
+          <td>${u.id}</td>
+          <td>${u.name}</td>
+          <td>${u.email}</td>
+          <td>${u.created_at_formatted}</td>
+          <td><button onclick="deleteUser(${u.id})">Eliminar</button></td>
         <tr id="row-${u.id}">
           <td>${u.id}</td>
           <td class="name-cell">${u.name}</td>
