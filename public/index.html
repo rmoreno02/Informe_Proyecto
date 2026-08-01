@@ -40,6 +40,15 @@
           <td>${u.email}</td>
           <td>${u.created_at_formatted}</td>
           <td><button onclick="deleteUser(${u.id})">Eliminar</button></td>
+        <tr id="row-${u.id}">
+          <td>${u.id}</td>
+          <td class="name-cell">${u.name}</td>
+          <td class="email-cell">${u.email}</td>
+          <td>${u.created_at_formatted}</td>
+          <td>
+            <button onclick="editUser(${u.id}, '${u.name}', '${u.email}')">Editar</button>
+            <button onclick="deleteUser(${u.id})">Eliminar</button>
+          </td>
         </tr>
       `).join("");
     }
@@ -47,6 +56,37 @@
     async function deleteUser(id) {
       await fetch(`/api/users/${id}`, { method: "DELETE" });
       loadUsers();
+    }
+
+    function editUser(id, currentName, currentEmail) {
+      const row = document.getElementById(`row-${id}`);
+      row.querySelector(".name-cell").innerHTML = `<input type="text" id="edit-name-${id}" value="${currentName}">`;
+      row.querySelector(".email-cell").innerHTML = `<input type="email" id="edit-email-${id}" value="${currentEmail}">`;
+      const actionsCell = row.children[4];
+      actionsCell.innerHTML = `
+        <button onclick="saveUser(${id})">Guardar</button>
+        <button onclick="loadUsers()">Cancelar</button>
+      `;
+    }
+
+    async function saveUser(id) {
+      const name = document.getElementById(`edit-name-${id}`).value;
+      const email = document.getElementById(`edit-email-${id}`).value;
+      const password = prompt("Confirma o cambia la contraseña para guardar los cambios:");
+      if (password === null) return;
+
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (res.ok) {
+        loadUsers();
+      } else {
+        const data = await res.json();
+        alert(data.errors ? data.errors.join("\n") : "Error al actualizar usuario");
+      }
     }
 
     document.getElementById("createForm").addEventListener("submit", async (e) => {
