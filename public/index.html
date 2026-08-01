@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard de Usuarios</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    input { padding: 6px; margin-right: 6px; }
+    button { padding: 6px 12px; }
+  </style>
+</head>
+<body>
+  <h2>Dashboard de Usuarios</h2>
+
+  <form id="createForm">
+    <input type="text" id="name" placeholder="Nombre" required />
+    <input type="email" id="email" placeholder="Correo" required />
+    <input type="password" id="password" placeholder="Contraseña" required />
+    <button type="submit">Agregar usuario</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Nombre</th><th>Correo</th><th>Creado</th><th>Acciones</th></tr>
+    </thead>
+    <tbody id="usersBody"></tbody>
+  </table>
+
+  <script>
+    async function loadUsers() {
+      const res = await fetch("/api/users");
+      const users = await res.json();
+      const body = document.getElementById("usersBody");
+      body.innerHTML = users.map(u => `
+        <tr id="row-${u.id}">
+          <td>${u.id}</td>
+          <td class="name-cell">${u.name}</td>
+          <td class="email-cell">${u.email}</td>
+          <td>${u.created_at_formatted}</td>
+          <td>
+            <button onclick="editUser(${u.id}, '${u.name}', '${u.email}')">Editar</button>
+            <button onclick="deleteUser(${u.id})">Eliminar</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function deleteUser(id) {
+      await fetch(`/api/users/${id}`, { method: "DELETE" });
+      loadUsers();
+    }
+
+    function editUser(id, currentName, currentEmail) {
+      const row = document.getElementById(`row-${id}`);
+      row.querySelector(".name-cell").innerHTML = `<input type="text" id="edit-name-${id}" value="${currentName}">`;
+      row.querySelector(".email-cell").innerHTML = `<input type="email" id="edit-email-${id}" value="${currentEmail}">`;
+      const actionsCell = row.children[4];
+      actionsCell.innerHTML = `
+        <button onclick="saveUser(${id})">Guardar</button>
+        <button onclick="loadUsers()">Cancelar</button>
+      `;
+    }
+
+    async function saveUser(id) {
+      const name = document.getElementById(`edit-name-${id}`).value;
+      const email = document.getElementById(`edit-email-${id}`).value;
+      const password = prompt("Confirma o cambia la contraseña para guardar los cambios:");
+      if (password === null) return;
+
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (res.ok) {
+        loadUsers();
+      } else {
+        const data = await res.json();
+        alert(data.errors ? data.errors.join("\n") : "Error al actualizar usuario");
+      }
+    }
+
+    document.getElementById("createForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      if (res.ok) {
+        e.target.reset();
+        loadUsers();
+      } else {
+        const data = await res.json();
+        alert(data.errors ? data.errors.join("\n") : "Error al crear usuario");
+      }
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>
